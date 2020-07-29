@@ -50,41 +50,36 @@ If you want to install GPU-version of LightGBM, please refer to their [documenta
 
   
 ### Train with Default Configuration
-- Train agent with MPC + CCE + TS + Model ensemble in the PointGoal1 environment:
+- Train agent with MPC + RCE + Model ensemble in the PointGoal1 environment:
 ```Shell
-python run.py --robot point --task goal --level 1 --ensemble 4 --config ./data/config.yml
-```
-
-To plot data:
-
-```
-python utils/plot.py data/test
+python run.py --robot point --level 1 --dir data/pg1 -n test-rce -o rce --c config.yml
 ```
 
 #### Arguments and Parameters
 | Flags and Parameters  | Description |
 | ------------- | ------------- |
 | ``--robot``  | robot model, selected from `point` or `car`  |
-| ``--task``  | task, selected from `goal` or `button` |
 | ``--level``  | environment difficulty, selected from `1` or `2`, where `2` would be more difficult than `1`  |
 | ``--epoch``  | maximum epochs to train  |
 | ``--episode``  | determines how many episodes data to collect for each epoch  |
-| ``--render``  | render the environment |
-| ``--test``  | test the performance of pretrained models without training  |
-| ``--seed``  | (Optional) Seed for Gym, PyTorch and Numpy  |
-| ``--dir``  |  directory to save the logging information  |
-| ``--name``  | name of the experiment, used to save data in a folder named by this parameter  |
+| ``--render``,``-r``  | render the environment |
+| ``--test``,``-t``  | test the performance of pretrained models without training  |
+| ``--seed``,``-s``  | seed for Gym, PyTorch and Numpy  |
+| ``--dir``, ``-d``  |  directory to save the logging information  |
+| ``--name``, ``-n``  | name of the experiment, used to save data in a folder named by this parameter  |
 | ``--save``  | save the trained dynamic model, data buffer, and cost model  |
 | ``--load``  | load the trained dynamic model, data buffer, and cost model from a specified directory  |
 | ``--ensemble``  | number of model ensembles  |
+| ``--optimizer``, ``-o``  | determine the optimizer, selected from `rce`, `cem`, or `random`  |
 | ``--config``  | specify the path to the configuation file of the models  |
 
 
 ### Plot a Single Figure from Data
-To plot a single figure:
+To plot a single figure from saved progress data, specify the directory and run:
 ```
-python script/plot.py data/test
+python script/plot.py path/to/stored/result -y Cost --smooth 30
 ```
+The script will parse all the sub directories in the `path/to/stored/` that contain `result` in the folder name.
 ![image](/data/TestFigure1.png)
 ```
 python script/plot.py data/pg1/ensemble-rce data/pg1/ensemble-cem --hline 14 15 --linename Test1 Test2
