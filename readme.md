@@ -89,7 +89,7 @@ python script/plot.py data/test
 ```
 python script/plot.py data/pg1/ensemble-rce data/pg1/ensemble-cem --hline 14 15 --linename Test1 Test2
 ```
-![image](https://github.com/liuzuxin/safe-mbrl/tree/master/data/TestFigure3.png)
+![image](/data/TestFigure3.png)
 
 Horizontal lines can be used as convergence values for model-free methods, as recalled from the proposed paper.
 
