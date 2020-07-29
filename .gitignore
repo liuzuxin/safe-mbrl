@@ -11,6 +11,6 @@ data/*ppo*
 *.pickle
 .ipynb_checkpoints/
 *.ckpt
-*.png
+#*.png
 *.pt
 */simple_save/*

@@ -36,9 +36,6 @@ def run(logger, config, args):
     elif args.robot.lower() == "car":
         env_config = DEFAULT_ENV_CONFIG_CAR
 
-    if args.obs_stack:
-        env_config["stack_obs"] = True
-
     env = SafetyGymEnv(robot=args.robot, task="goal", level=args.level, seed=args.seed, config=env_config)
     # MPC and dynamic model config
     mpc_config = config['mpc_config']
@@ -160,24 +157,22 @@ python run.py --level 2 --robot car --ensemble 5 --dir data/cg2/ -n ensemble-cem
 if __name__ == '__main__':
     
     parser = argparse.ArgumentParser()
-    parser.add_argument('--robot', type=str, default='point')
-    parser.add_argument('--level', type=int, default=1)
-    parser.add_argument('--epoch', type=int, default=80)
-    parser.add_argument('--episode', type=int, default=10)
-    parser.add_argument('--render','-r', action='store_true')
-    parser.add_argument('--test', action='store_true')
-    parser.add_argument('--obs_stack', action='store_true')
+    parser.add_argument('--robot', type=str, default='point', help="robot model, selected from `point` or `car` ")
+    parser.add_argument('--level', type=int, default=1, help="environment difficulty, selected from `1` or `2`, where `2` would be more difficult than `1`")
+    parser.add_argument('--epoch', type=int, default=80, help="maximum epochs to train")
+    parser.add_argument('--episode', type=int, default=10, help="determines how many episodes data to collect for each epoch")
+    parser.add_argument('--render','-r', action='store_true', help="render the environment")
+    parser.add_argument('--test', 't', action='store_true', help="test the performance of pretrained models without training")
 
-    parser.add_argument('--seed', '-s', type=int, default=1)
-    parser.add_argument('--dir', type=str, default='./data/')
-    parser.add_argument('--name','-n', type=str, default='test')
-    parser.add_argument('--save', action='store_true')
-    parser.add_argument('--load',type=str, default=None)
+    parser.add_argument('--seed', '-s', type=int, default=1, help="seed for Gym, PyTorch and Numpy")
+    parser.add_argument('--dir', '-d',type=str, default='./data/', help="directory to save the logging information")
+    parser.add_argument('--name','-n', type=str, default='test', help="name of the experiment, used to save data in a folder named by this parameter")
+    parser.add_argument('--save', action='store_true', help="save the trained dynamic model, data buffer, and cost model")
+    parser.add_argument('--load',type=str, default=None, help="load the trained dynamic model, data buffer, and cost model from a specified directory")
+    parser.add_argument('--ensemble',type=int, default=0, help="number of model ensembles, if this argument is greater than 0, then it will replace the default ensembles number in config.yml") # number of ensembles
+    parser.add_argument('--optimizer','-o',type=str, default="rce", help=" determine the optimizer, selected from `rce`, `cem`, or `random` ") # random, cem or CCE
 
-    parser.add_argument('--ensemble',type=int, default=0) # number of ensembles
-    parser.add_argument('--optimizer','-o',type=str, default="rce") # random, cem or CCE
-
-    parser.add_argument('--config', type=str, default='./data/config.yml')
+    parser.add_argument('--config', '-c', type=str, default='./config.yml', help="specify the path to the configuation file of the models")
 
     args = parser.parse_args()
 

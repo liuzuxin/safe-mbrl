@@ -104,6 +104,12 @@ def get_datasets(logdir, condition=None):
                 else:
                     print("Configuration file config.json and config.yml is not found in %s"%(root))
                 #print('No file named config.json')
+
+            if "rce" in exp_name:
+                exp_name = "MPC-RCE"
+            exp_name = "MPC-CEM" if "cem" in exp_name else exp_name
+            exp_name = "MPC-random" if "random" in exp_name else exp_name
+
             condition1 = condition or exp_name or 'exp' # differentiate by method
             condition2 = condition1 + '-' + str(exp_idx) # differentiate by seed
             exp_idx += 1
@@ -247,7 +253,7 @@ def plot(datasets, x_label, y_label, condition, smooth, lineloc=None, linename=N
     # Layout
     #plt.ylim(0,18)
     plt.tight_layout(pad=1)
-
+    plt.savefig("data/plots/"+y_label+".png")
 
     # show plot
     plt.show()
@@ -286,7 +292,14 @@ def main():
     # each column is a Series
     datasets = shorten_datasets(datasets, cut, condition)
     datasets = align_datasets(datasets, x_label, condition)
-    #print(datasets)
+
+    for df in datasets:
+        df.rename(columns={"EpCost":"Cost","EpRet":"Reward", "AverageEpCost":"Cost","AverageEpRet":"Reward", 
+                            "TotalEnvInteracts":"Steps"}, inplace=True)
+
+    x_label = "Steps" if x_label=="TotalEnvInteracts" else x_label
+    y_label = "Cost" if y_label=="EpCost" or y_label=="AverageEpCost" else y_label
+    y_label = "Reward" if y_label=="EpRet" or y_label=="AverageEpRet" else y_label
 
     plot(datasets, x_label, y_label, condition, smooth, lineloc = args.hline, linename = args.linename)
 
