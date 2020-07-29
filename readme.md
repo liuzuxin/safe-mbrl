@@ -102,7 +102,7 @@ The script does not yet support reading a combination of model-free and model-ba
 | ``--xaxis``  | the data that will be plotted as the x-axis. e.g. `TotalEnvInteracts`, `Episode`  |
 | ``--yaxis``  | the data that will be plotted as the y-axis. e.g. `EpRet` is the reward in 1 episode; `EpCost` is the cost in 1 episode  |
 | ``--condition``  | how to categorize the plotted lines; select `Method` to group data by method of experiment, `BySeed` to separate individual trials  |
-| ``--smooth``  | determines how smoothening is done while plotting; larger value means more smoothening; default `50`; input `0` to turn off  |
+| ``--smooth``  | determines how much smoothening is done while plotting; larger value means more smoothening; default `50`; input `0` to turn off  |
 | ``--cut``  | determines how to shorten the datasets for alignment; select `2` for no action, `1` to align each group of data, `0` for global shortest alignment |
 | ``--hline``  | (Optional) the y coordinates where horizontal dotted lines will be plotted; input a list of numbers |
 | ``--linename``  | (Optional) a list of strings that are the labels to the above horizontal lines, respectively  |
