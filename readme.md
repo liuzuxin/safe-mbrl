@@ -32,7 +32,7 @@ To installing other dependencies (tqdm, pyyaml, mpi4py, psutil, matplotlib, seab
 
 ### LightGBM installation
 
-Our method depends one [LightGBM](https://lightgbm.readthedocs.io/en/latest/) model, we recommend to install LightGBM package through pip or conda:
+Our method depends on [LightGBM](https://lightgbm.readthedocs.io/en/latest/) model; we recommend to install LightGBM package through pip or conda:
 
 ```
 pip install lightgbm
@@ -43,7 +43,7 @@ conda install -c conda-forge lightgbm
 ```
 We suggest you install pytorch first as there might be package conflicts if installing lightgbm first.
 
-If you want to install GPU-version of LightGBM, please refer to their [documentation](https://lightgbm.readthedocs.io/en/latest/GPU-Tutorial.html)
+If you want to install GPU-version of LightGBM, please refer to their [documentation](https://lightgbm.readthedocs.io/en/latest/GPU-Tutorial.html).
 
 
 ## Usage
@@ -61,7 +61,7 @@ To plot data:
 python utils/plot.py data/test
 ```
 
-### Arguments and Parameters
+#### Arguments and Parameters
 | Flags and Parameters  | Description |
 | ------------- | ------------- |
 | ``--robot``  | robot model, selected from `point` or `car`  |
@@ -78,3 +78,51 @@ python utils/plot.py data/test
 | ``--load``  | load the trained dynamic model, data buffer, and cost model from a specified directory  |
 | ``--ensemble``  | number of model ensembles  |
 | ``--config``  | specify the path to the configuation file of the models  |
+
+
+### Plot a Single Figure from Data
+To plot a single figure:
+```
+python script/plot.py data/test
+```
+![image](https://github.com/liuzuxin/safe-mbrl/tree/master/data/TestFigure1.png)
+```
+python script/plot.py data/pg1/ensemble-rce data/pg1/ensemble-cem --hline 14 15 --linename Test1 Test2
+```
+![image](https://github.com/liuzuxin/safe-mbrl/tree/master/data/TestFigure3.png)
+
+Horizontal lines can be used as convergence values for model-free methods, as recalled from the proposed paper.
+
+The script does not yet support reading a combination of model-free and model-based data as their data files are coded differently. Be careful when selecing the paths to files.
+
+#### Arguments and Parameters
+| Flags and Parameters  | Description |
+| ------------- | ------------- |
+| Mandatory argument  | list of paths to data `progress.txt`; all sub-directories of the paths will be scanned.  |
+| ``--xaxis``  | the data that will be plotted as the x-axis. e.g. `TotalEnvInteracts`, `Episode`  |
+| ``--yaxis``  | the data that will be plotted as the y-axis. e.g. `EpRet` is the reward in 1 episode; `EpCost` is the cost in 1 episode  |
+| ``--condition``  | how to categorize the plotted lines; select `Method` to group data by method of experiment, `BySeed` to separate individual trials  |
+| ``--smooth``  | determines how smoothening is done while plotting; larger value means more smoothening; default `50`; input `0` to turn off  |
+| ``--cut``  | determines how to shorten the datasets for alignment; select `2` for no action, `1` to align each group of data, `0` for global shortest alignment |
+| ``--hline``  | (Optional) the y coordinates where horizontal dotted lines will be plotted; input a list of numbers |
+| ``--linename``  | (Optional) a list of strings that are the labels to the above horizontal lines, respectively  |
+
+
+### Average and Aggregate from Data
+As used in Table 1 of the proposed paper, mean and sum of data can be taken using the following method:
+```
+python script/count.py data/cg1/ensemble-rce data/cg1/ensemble-cem --sum 100
+```
+Mean value of the targetted label is taken across a group; e.g. mean `cost` for `RCE method`. The first `N` mean values are then summed for each group.
+The output format follows: {Group name: Sum of N mean values}
+
+#### Arguments and Parameters
+| Flags and Parameters  | Description |
+| ------------- | ------------- |
+| Mandatory argument  | list of paths to data `progress.txt`; all sub-directories of the paths will be scanned.  |
+| ``--target``  | the targetted label. e.g. `EpRet`, `EpCost`  |
+| ``--condition``  | how to categorize the plotted lines; select `Method` to group data by method of experiment, `BySeed` to separate individual trials  |
+| ``--cut``  | determines how to shorten the datasets for alignment; select `2` for no action, `1` to align each group of data, `0` for global shortest alignment |
+| ``--sum``  | `N`, sum the first `N` elements  |
+
+
