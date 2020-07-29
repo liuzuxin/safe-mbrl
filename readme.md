@@ -85,7 +85,7 @@ To plot a single figure:
 ```
 python script/plot.py data/test
 ```
-![image](https://github.com/liuzuxin/safe-mbrl/tree/master/data/TestFigure1.png)
+![image](/data/TestFigure1.png)
 ```
 python script/plot.py data/pg1/ensemble-rce data/pg1/ensemble-cem --hline 14 15 --linename Test1 Test2
 ```
