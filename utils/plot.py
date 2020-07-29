@@ -71,8 +71,8 @@ def plot_data(data, xaxis='Epoch', value="AverageEpRet", condition="Condition1",
         # Just some formatting niceness: x-axis scale in scientific notation if max x is large
         plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
 
-    plt.tight_layout(pad=0.5)
-    plt.savefig("./results/{}.png".format(value))
+    #plt.tight_layout(pad=0.5)
+    #plt.savefig("./results/{}.png".format(value))
 
 def get_datasets(logdir, condition=None):
     """

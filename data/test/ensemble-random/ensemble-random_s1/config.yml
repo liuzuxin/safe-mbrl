@@ -3,7 +3,7 @@ arguments:
     dir: data/test/
     ensemble: 0
     episode: 10
-    epoch: 25
+    epoch: 55
     level: 1
     load: null
     name: ensemble-random
@@ -12,7 +12,7 @@ arguments:
     render: false
     robot: point
     save: false
-    seed: 10
+    seed: 1
     test: false
 cost_config:
     batch: 2000
@@ -50,15 +50,6 @@ dynamic_config:
     test_ratio: 0.15
 exp_name: ensemble-random
 mpc_config:
-    CCE:
-        alpha: 0.1
-        epsilon: 0.01
-        init_mean: 0
-        init_var: 1
-        max_iters: 8
-        minimal_elites: 5
-        num_elites: 12
-        popsize: 500
     CEM:
         alpha: 0.1
         epsilon: 0.01
@@ -69,6 +60,15 @@ mpc_config:
         popsize: 500
     RANDOM:
         popsize: 5000
+    RCE:
+        alpha: 0.1
+        epsilon: 0.01
+        init_mean: 0
+        init_var: 1
+        max_iters: 8
+        minimal_elites: 5
+        num_elites: 12
+        popsize: 500
     gamma: 0.98
     horizon: 8
     optimizer: RANDOM
