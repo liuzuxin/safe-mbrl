@@ -253,7 +253,7 @@ def plot(datasets, x_label, y_label, condition, smooth, lineloc=None, linename=N
     # Layout
     #plt.ylim(0,18)
     plt.tight_layout(pad=1)
-    plt.savefig("data/plots/"+y_label+".png")
+    #.savefig("data/figures/"+y_label+".png")
 
     # show plot
     plt.show()
