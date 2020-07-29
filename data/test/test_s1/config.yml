@@ -1,23 +1,22 @@
 arguments:
-    config: ./data/config.yml
+    config: config.yml
     dir: ./data/
     ensemble: 0
     episode: 10
     epoch: 80
     level: 1
-    load: null
+    load: data/pg1/ensemble-rce/ensemble-rce_s0/
     name: test
-    obs_stack: false
     optimizer: rce
-    render: false
+    render: true
     robot: point
     save: false
     seed: 1
     test: false
 cost_config:
     batch: 2000
-    load: false
-    load_folder: null
+    load: true
+    load_folder: data/pg1/ensemble-rce/ensemble-rce_s0/
     max_ratio: 3
     model_param:
         boosting_type: gbdt
@@ -40,8 +39,8 @@ dynamic_config:
     - 1024
     - 1024
     learning_rate: 0.001
-    load: false
-    load_folder: null
+    load: true
+    load_folder: data/pg1/ensemble-rce/ensemble-rce_s0/
     n_ensembles: 4
     n_epochs: 70
     save: false

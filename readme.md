@@ -74,17 +74,24 @@ python run.py --robot point --level 1 --dir data/pg1 -n test-rce -o rce --c conf
 | ``--config``  | specify the path to the configuation file of the models  |
 
 
+- Test with the trained model in the PointGoal1 environment:
+```Shell
+python run.py --robot point --level 1 -o rce --c config.yml -r -t --load data/pg1/ensemble-rce/ensemble-rce_s0/
+```
+
+- To test with some pretrained models, please download the data from this [link](https://drive.google.com/file/d/1aJuI3iwphxhtd0L_CDUHqB4XN-xPpITk/view?usp=sharing), unzip it, and replace the `data` folder with the unzipped one.
+
 ### Plot a Single Figure from Data
 To plot a single figure from saved progress data, specify the directory and run:
 ```
 python script/plot.py path/to/stored/result -y Cost --smooth 30
 ```
 The script will parse all the sub directories in the `path/to/stored/` that contain `result` in the folder name.
-![image](/data/TestFigure1.png)
+![image](/data/figures/pg1-Reward.png)
 ```
 python script/plot.py data/pg1/ensemble-rce data/pg1/ensemble-cem --hline 14 15 --linename Test1 Test2
 ```
-![image](/data/TestFigure3.png)
+![image](/data/figures/TestFigure3.png)
 
 Horizontal lines can be used as convergence values for model-free methods, as recalled from the proposed paper.
 

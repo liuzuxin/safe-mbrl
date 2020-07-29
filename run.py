@@ -1,20 +1,16 @@
-import time
 import argparse
-import os, sys, yaml
-import os.path as osp
-
-import numpy as np
 import gym
-import pickle
+import numpy as np
 import safety_gym
 import torch
+import time
 from tqdm import tqdm
 
+from mbrl import SafeMPC, RegressionModelEnsemble, CostModel
 from utils.logx import EpochLogger
 from utils.run_utils import setup_logger_kwargs, combined_shape, load_config, seed_torch
-
-from mbrl import SafeMPC, RegressionModelEnsemble, CostModel
 from utils.env_utils import SafetyGymEnv
+
 
 DEFAULT_ENV_CONFIG_POINT = dict(
     action_repeat=3,
@@ -30,25 +26,21 @@ DEFAULT_ENV_CONFIG_CAR = dict(
 )
 
 def run(logger, config, args):
-
     if args.robot.lower() == "point":
         env_config = DEFAULT_ENV_CONFIG_POINT
     elif args.robot.lower() == "car":
         env_config = DEFAULT_ENV_CONFIG_CAR
-
     env = SafetyGymEnv(robot=args.robot, task="goal", level=args.level, seed=args.seed, config=env_config)
     # MPC and dynamic model config
     mpc_config = config['mpc_config']
     mpc_config["optimizer"] = args.optimizer.upper()
     cost_config = config['cost_config']
     dynamic_config = config['dynamic_config']
-
     if args.load is not None:
         dynamic_config["load"] = True
         dynamic_config["load_folder"] = args.load
         cost_config["load"] = True
         cost_config["load_folder"] = args.load
-
     if args.save:
         dynamic_config["save"] = True
         dynamic_config["save_folder"] = logger.output_dir
@@ -58,21 +50,15 @@ def run(logger, config, args):
     config["arguments"] = vars(args)
     logger.save_config(config)
 
-    state_dim = env.observation_size
-    action_dim = env.action_size
-    action_low, action_high = env.action_space.low, env.action_space.high
-    print("obs dim, act dim: ", state_dim, action_dim, "act low high: ", action_low, action_high)
-
+    state_dim, action_dim = env.observation_size, env.action_size
     if args.ensemble>0:
         dynamic_config["n_ensembles"] = args.ensemble
-
     dynamic_model = RegressionModelEnsemble(state_dim+action_dim, state_dim, config=dynamic_config)
     cost_model = CostModel(env, cost_config)
     mpc_controller = SafeMPC(env, mpc_config, cost_model=cost_model, n_ensembles=dynamic_config["n_ensembles"])
 
     # Prepare random collected dataset
     start_time = time.time()
-
     pretrain_episodes = 500 if args.load is None else 10
     pretrain_max_step = 50
     print("collecting random episodes...")
@@ -84,13 +70,11 @@ def run(logger, config, args):
         while not done and i<pretrain_max_step:
             action = env.action_space.sample()
             obs_next, reward, done, info = env.step(action)
-
             if not info["goal_met"] and not done:  # otherwise the goal position will change
-                x = np.concatenate((obs, action))
-                y = obs_next # - obs
+                x, y = np.concatenate((obs, action)), obs_next
                 dynamic_model.add_data_point(x, y)
                 cost = 1 if info["cost"]>0 else 0
-                cost_model.add_data_point(obs_next, cost, x)
+                cost_model.add_data_point(obs_next, cost)
                 data_num += 1
                 i += 1
             obs = obs_next
@@ -120,15 +104,13 @@ def run(logger, config, args):
                 ep_ret += reward
                 total_len += 1
                 ep_cost += info["cost"]
-
                 if not info["goal_met"] and not done:
                     x = np.concatenate((obs, action))
                     y = obs_next #- obs
                     dynamic_model.add_data_point(x, y)
                     cost = 1 if info["cost"]>0 else 0
-                    cost_model.add_data_point(obs_next, cost, x)
+                    cost_model.add_data_point(obs_next, cost)
                 obs = obs_next     
-
             logger.store(EpRet=ep_ret, EpCost=ep_cost)
             logger.log_tabular('Epoch', epoch)
             logger.log_tabular('Episode', total_epi)
@@ -138,7 +120,6 @@ def run(logger, config, args):
             logger.log_tabular('Time', time.time()-start_time)
             logger.dump_tabular()
             total_epi += 1
-
         # training the model
         if not args.test:
             dynamic_model.fit(use_data_buf=True, normalize=True)
@@ -146,13 +127,13 @@ def run(logger, config, args):
     env.close()
 
 '''
-python run.py --level 1 --robot point --ensemble 4 --dir data/pg1/ -n ensemble-random -o random --epoch 25 --seed 10
+python run.py --level 1 --robot point --dir data/pg1/ -n cce -o cce --epoch 25 --seed 0
 
-python run.py --level 1 --robot car --ensemble 5 --dir data/cg1/ -n ensemble-random -o random --epoch 70 --seed 10
+python run.py --level 1 --robot car --dir data/cg1/ -n cce -o cce --epoch 70 --seed 0
 
-python run.py --level 2 --robot point --ensemble 4 --dir data/pg2/ -n ensemble-cce -o cce --epoch 40 --seed 10
+python run.py --level 2 --robot point --dir data/pg2/ -n ensemble-cce -o cce --epoch 40 --seed 10
 
-python run.py --level 2 --robot car --ensemble 5 --dir data/cg2/ -n ensemble-cem -o cem --epoch 80 --seed 100
+python run.py --level 2 --robot car --dir data/cg2/ -n ensemble-cem -o cem --epoch 80 --seed 100
 '''
 if __name__ == '__main__':
     
@@ -162,7 +143,7 @@ if __name__ == '__main__':
     parser.add_argument('--epoch', type=int, default=80, help="maximum epochs to train")
     parser.add_argument('--episode', type=int, default=10, help="determines how many episodes data to collect for each epoch")
     parser.add_argument('--render','-r', action='store_true', help="render the environment")
-    parser.add_argument('--test', 't', action='store_true', help="test the performance of pretrained models without training")
+    parser.add_argument('--test', '-t', action='store_true', help="test the performance of pretrained models without training")
 
     parser.add_argument('--seed', '-s', type=int, default=1, help="seed for Gym, PyTorch and Numpy")
     parser.add_argument('--dir', '-d',type=str, default='./data/', help="directory to save the logging information")
@@ -171,11 +152,9 @@ if __name__ == '__main__':
     parser.add_argument('--load',type=str, default=None, help="load the trained dynamic model, data buffer, and cost model from a specified directory")
     parser.add_argument('--ensemble',type=int, default=0, help="number of model ensembles, if this argument is greater than 0, then it will replace the default ensembles number in config.yml") # number of ensembles
     parser.add_argument('--optimizer','-o',type=str, default="rce", help=" determine the optimizer, selected from `rce`, `cem`, or `random` ") # random, cem or CCE
-
     parser.add_argument('--config', '-c', type=str, default='./config.yml', help="specify the path to the configuation file of the models")
 
     args = parser.parse_args()
-
     logger_kwargs = setup_logger_kwargs(args.name, args.seed, args.dir)
     logger = EpochLogger(**logger_kwargs)
     config = load_config(args.config)

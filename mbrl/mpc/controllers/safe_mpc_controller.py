@@ -2,15 +2,16 @@
 @Author: Zuxin Liu
 @Email: zuxinl@andrew.cmu.edu
 @Date:   2020-03-24 10:42:50
-@LastEditTime: 2020-07-29 15:16:13
+@LastEditTime: 2020-07-19 14:36:59
 @Description:
 '''
 
 import numpy as np
-from mbrl.optimizers import RandomOptimizer, CEMOptimizer, CCEOptimizer
+from mbrl.mpc.optimizers import RandomOptimizer, CEMOptimizer, CCEOptimizer
+
 
 class SafeMPC(object):
-    optimizers = {"CEM": CEMOptimizer, "RANDOM": RandomOptimizer, "RCE": CCEOptimizer}
+    optimizers = {"CEM": CEMOptimizer, "RANDOM": RandomOptimizer, "CCE": CCEOptimizer}
 
     def __init__(self, env, mpc_config, cost_model = None, n_ensembles=0):
         # mpc_config = config["mpc_config"]
@@ -46,11 +47,11 @@ class SafeMPC(object):
         assert cost_model is not None, " cost model is not defined! "
         self.cost_model = cost_model
 
-        if self.type == 'RCE':
+        if self.type == 'CCE':
             if self.n_ensembles>0:
                 self.optimizer.setup(self.ts_cost_function)
             else:
-                self.optimizer.setup(self.rce_cost_function)
+                self.optimizer.setup(self.cce_cost_function)
         else:
             self.optimizer.setup(self.cost_function)
 
@@ -112,7 +113,7 @@ class SafeMPC(object):
         #    print("all sampling traj will violate constraints")
         return costs
 
-    def rce_cost_function(self, actions):
+    def cce_cost_function(self, actions):
         """
         Calculate the cost given a sequence of actions
         Parameters:

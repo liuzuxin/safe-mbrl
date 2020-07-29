@@ -2,16 +2,106 @@
 @Author: Zuxin Liu
 @Email: zuxinl@andrew.cmu.edu
 @Date:   2020-05-27 12:51:18
-@LastEditTime: 2020-07-29 15:36:05
+@LastEditTime: 2020-07-24 19:02:42
 @Description:
 '''
 import numpy as np
 import os.path as osp
 import os
+import joblib
 import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader, random_split
-from mbrl.models.base import MLPRegression, CUDA, CPU, combined_shape, DataBuffer
+
+from mbrl.mpc.models.base import MLPRegression, MLPCategorical
+
+def CUDA(var):
+    return var.cuda() if torch.cuda.is_available() else var
+
+def CPU(var):
+    return var.cpu().detach()
+
+def combined_shape(length, shape=None):
+    if shape is None:
+        return (length,)
+    return (length, shape) if np.isscalar(shape) else (length, *shape)
+
+class DataBuffer:
+    # numpy-based ring buffer to store data
+
+    def __init__(self, input_dim, output_dim, max_len=5000000):
+        self.input_buf = np.zeros(combined_shape(max_len, input_dim), dtype=np.float32)
+        self.output_buf = np.zeros(combined_shape(max_len, output_dim), dtype=np.float32)
+        self.ptr, self.max_size = 0, max_len
+        self.full = 0 # indicate if the buffer is full and begin a new circle
+        self.ptr_old = 0
+        self.ptr_reset = 0 # indicate if we have reset prt to 0 since last data retrival
+
+    def store(self, input_data, output_data):
+        """
+        Append one data to the buffer.
+        @param input_data [ndarray, input_dim]
+        @param input_data [ndarray, output_dim]
+        """
+        if self.ptr == self.max_size:
+            self.full = 1 # finish a ring
+            self.ptr_reset += 1
+            self.ptr = 0
+        self.input_buf[self.ptr] = input_data
+        self.output_buf[self.ptr] = output_data
+        self.ptr += 1
+
+    def get_all(self):
+        '''
+        Return all the valid data in the buffer
+        @return input_buf [ndarray, (size, input_dim)], output_buf [ndarray, (size, input_dim)]
+        '''
+
+        self.ptr_reset = 0
+        if self.full:
+            print("data buffer is full, return all data: ", self.max_size, self.ptr)
+            return self.input_buf, self.output_buf
+        # Buffer is not full
+        print("return data util ", self.ptr)
+        return self.input_buf[:self.ptr], self.output_buf[:self.ptr]
+
+    def get_new(self):
+        '''
+        Return new input data in the buffer since last retrival by calling this method
+        @return input_buf [ndarray, (size, input_dim)], output_buf [ndarray, (size, input_dim)]
+        '''
+        if self.ptr_reset > 1: # two round
+            x, y = self.input_buf, self.output_buf
+        elif self.ptr_reset == 1:
+            if self.ptr < self.ptr_old:
+                x = np.concatenate((input_buf[:self.ptr], input_buf[self.ptr_old]), axis=1)
+                y = np.concatenate((output_buf[:self.ptr], output_buf[self.ptr_old]), axis=1)
+            else:
+                x, y = self.input_buf, self.output_buf
+        else:
+            x, y = self.input_buf[self.ptr_old:self.ptr], self.output_buf[self.ptr_old:self.ptr]
+        self.ptr_old = self.ptr
+        self.ptr_reset = 0
+        return x, y
+
+    def save(self, path=None):
+        assert path is not None, "The saving path is not specified!"
+        x, y = self.get_all()
+        data = {"x":x,"y":y}
+        joblib.dump(data, path)
+        print("Successfully save data buffer to "+path)
+
+    def load(self, path=None):
+        assert path is not None, "The loading path is not specified!"
+        data = joblib.load(path)
+        x, y = data["x"], data["y"]
+        data_num = x.shape[0]
+        if data_num<self.max_size:
+            self.input_buf[:data_num], self.output_buf[:data_num] = x, y
+            self.ptr = data_num
+        else:
+            self.input_buf, self.output_buf = x[:self.max_size], y[:self.max_size]
+            self.full = 1
 
 DEFAULT_CONFIG = dict(
                 n_ensembles=7,
@@ -32,21 +122,26 @@ DEFAULT_CONFIG = dict(
             )
 
 class RegressionModelEnsemble:
-    def __init__(self, input_dim, output_dim, config=DEFAULT_CONFIG):
+    def __init__(self, input_dim, output_dim, config):
         super().__init__()
 
         self.input_dim = input_dim
         self.output_dim = output_dim
+
         self.n_ensembles = config["n_ensembles"]
+
         # how many percentage of data in the training used for training one model, 0.8 = use 80% data to train
         self.data_split = config["data_split"] 
+
         self.n_epochs = config["n_epochs"]
         self.lr = config["learning_rate"]
         self.batch_size = config["batch_size"]
+
         self.test_freq = config["test_freq"]
         self.test_ratio = config["test_ratio"]
         activ = config["activation"]
         activ_f = nn.Tanh if activ == "tanh" else nn.ReLU
+
         self.data_buf = DataBuffer(self.input_dim, self.output_dim, max_len=config["buffer_size"])
 
         self.mu = torch.tensor(0.0)
@@ -75,7 +170,9 @@ class RegressionModelEnsemble:
         self.criterion = nn.MSELoss(reduction='mean')
         self.optimizers = []
         for i in range(self.n_ensembles):
-            self.optimizers.append(torch.optim.Adam(self.models[i].parameters(), lr=self.lr))  
+            self.optimizers.append(torch.optim.Adam(self.models[i].parameters(), lr=self.lr))
+
+        
     
     def add_data_point(self, input_data, output_data):
         '''
@@ -147,18 +244,30 @@ class RegressionModelEnsemble:
         @param x [list or ndarray, (batch, input_dim)]
         @param y [list or ndarray, (batch, output_dim)]
         '''
+
         tensor_x = x if torch.is_tensor(x) else torch.tensor(x).float()
+
         tensor_y = y if torch.is_tensor(y) else torch.tensor(y).float()
+
         if normalize:
             self.mu = torch.mean(tensor_x, dim=0, keepdims=True)
             self.sigma = torch.std(tensor_x, dim=0, keepdims=True)
             self.label_mu = torch.mean(tensor_y, dim=0, keepdims=True)
-            self.label_sigma = torch.std(tensor_y, dim=0, keepdims=True)      
+            self.label_sigma = torch.std(tensor_y, dim=0, keepdims=True)
+            
             self.sigma[self.sigma<self.eps] = 1
             self.label_sigma[self.label_sigma<self.eps] = 1
+
+            # print("data normalized")
+            # print("mu: ", self.mu)
+            # print("sigma: ", self.sigma)
+            # print("label mu: ", self.label_mu)
+            # print("label sigma: ", self.label_sigma)
+
             tensor_x = (tensor_x-self.mu) / (self.sigma)
             tensor_y = (tensor_y-self.label_mu) / (self.label_sigma)
         self.dataset = TensorDataset(tensor_x, tensor_y)
+
         return self.dataset
 
     def train_one_epoch(self, model, optimizer, dataloader):
@@ -168,6 +277,7 @@ class RegressionModelEnsemble:
             datas = CUDA(datas)
             labels = CUDA(labels)
             optimizer.zero_grad()
+
             outputs = model(datas)
             loss = self.criterion(outputs, labels)
             loss.backward()
@@ -192,6 +302,7 @@ class RegressionModelEnsemble:
             dataset =  self.make_dataset(x, y, normalize = normalize)
         else: # use external data loader
             dataset = self.make_dataset(x, y, normalize = normalize)
+
         num_data = len(dataset)
         testing_len = int(self.test_ratio * num_data)
         training_len = num_data - testing_len
@@ -222,6 +333,10 @@ class RegressionModelEnsemble:
                     print(f"[{epoch}/{self.n_epochs}],loss train m: {train_loss_mean:.4f}, v: {train_loss_var:.4f}, test m: {test_loss_mean:.4f}, v: {test_loss_var:.4f}")
                 else:
                     print(f"[{epoch}/{self.n_epochs}],mse train mean: {train_loss_mean:.4f}, var: {train_loss_var:.4f}, no testing data")
+
+                # loss_unormalized = self.test(x[::50], y[::50])
+                # print("loss unnormalized: ", loss_unormalized)
+
                 if test_loss_mean < best_loss:
                     best_loss = test_loss_mean
                     loss_increase = 0
@@ -230,6 +345,7 @@ class RegressionModelEnsemble:
 
                 if loss_increase > patience:
                     break
+        
         if self.save:
             self.save_data()
 

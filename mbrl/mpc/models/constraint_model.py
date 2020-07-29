@@ -2,7 +2,7 @@
 @Author: Zuxin Liu
 @Email: zuxinl@andrew.cmu.edu
 @Date:   2020-07-10 10:42:50
-@LastEditTime: 2020-07-29 15:29:14
+@LastEditTime: 2020-07-24 19:02:05
 @Description:
 '''
 
@@ -10,6 +10,7 @@ import numpy as np
 import joblib
 import os.path as osp
 import os
+import time
 
 import lightgbm as lgb
 from utils.run_utils import color2num, colorize
@@ -21,6 +22,7 @@ def combined_shape(length, shape=None):
 
 class DataBuffer:
     # numpy-based ring buffer to store data
+
     def __init__(self, input_dim, output_dim=None, max_len=5000000):
         self.input_buf = np.zeros(combined_shape(max_len, input_dim), dtype=np.float32)
         self.output_buf = np.zeros(combined_shape(max_len), dtype=np.float32)
@@ -46,7 +48,10 @@ class DataBuffer:
         @return input_buf [ndarray, (size, input_dim)], output_buf [ndarray, (size, input_dim)]
         '''
         if self.full:
+            #print("data buffer is full, return all data: ", self.max_size, self.ptr)
             return self.input_buf, self.output_buf
+        # Buffer is not full
+        #print("return data util ", self.ptr)
         return self.input_buf[:self.ptr], self.output_buf[:self.ptr]
 
     def save(self, path=None):
@@ -55,6 +60,7 @@ class DataBuffer:
         data = {"x":x,"y":y}
         joblib.dump(data, path)
         
+
     def load(self, path=None):
         assert path is not None, "The loading path is not specified!"
         data = joblib.load(path)
@@ -96,6 +102,8 @@ class CostModel:
         self.safe_data_buf = DataBuffer(self.state_dim, max_len=config["safe_buffer_size"])
         self.unsafe_data_buf = DataBuffer(self.state_dim, max_len=config["unsafe_buffer_size"])
 
+        self.unsafe_transition_data_buf = DataBuffer(self.state_dim+self.action_dim, max_len=config["unsafe_buffer_size"])
+
         self.max_ratio = config["max_ratio"]
         self.batch = int(config["batch"])
         
@@ -114,12 +122,14 @@ class CostModel:
                 os.makedirs(self.folder)
             self.safe_data_buf_path = osp.join(self.folder, "safe_data_buf.pkl")
             self.unsafe_data_buf_path = osp.join(self.folder, "unsafe_data_buf.pkl")
+            self.unsafe_transition_data_buf_path = osp.join(self.folder, "unsafe_transition_data_buf.pkl")
             self.model_path = osp.join(self.folder, "cost_model.pkl")
 
-    def add_data_point(self, state, cost):
+    def add_data_point(self, state, cost, s_a_pair):
         '''
         This method is used for streaming data setting, where one data will be added at each time.
         @param state [list or ndarray, (state_dim)]
+        @param s_a_pair [list or ndarray, (state_dim + action_dim)]: unsafe state action pair
         @param cost [int, (1)]: 0 - safe data; 1 - unsafe data;
         '''
         x = np.array(state).reshape(self.state_dim)
@@ -127,6 +137,47 @@ class CostModel:
             self.safe_data_buf.store(x, 0)
         elif cost > 0:
             self.unsafe_data_buf.store(x, 1)
+            self.unsafe_transition_data_buf.store(s_a_pair, 1)
+        elif cost < 0:
+            print("The cost should not be negative!!!!!!!!!!!!!!!!!!!!")
+
+    def get_uncertain_data(self, dynamic_model): 
+        x, y = self.unsafe_transition_data_buf.get_all()
+        assert x.shape[0]>0, " no unsafe data buffer "
+        state_next = dynamic_model.predict(x) #[B, s]
+        constraints_violation = self._predict_cost(state_next) # [B]
+        inaccurate_pred = state_next[constraints_violation==0] # If dynamic model is accurate, all the prediction should be 1
+        num = inaccurate_pred.shape[0]
+        total_num = x.shape[0]
+        ratio = num/total_num
+        print("inaccurate_pred: %i/%i, ratio: %.3f"%(num, total_num, ratio))
+        return inaccurate_pred, ratio
+
+    def model_correction(self, dynamic_model, iteration=5):
+        print(colorize("Conducting safety check with collected unsafe data....", color='blue', bold=True))
+        for i in range(iteration):
+            print("round ", i)
+            inaccurate_pred, ratio = self.get_uncertain_data(dynamic_model)
+            if ratio<0.02:
+                break
+            x0, y0 = self.safe_data_buf.get_all()
+            x1, y1 = self.unsafe_data_buf.get_all()
+            x2, y2 = inaccurate_pred, np.ones(inaccurate_pred.shape[0])
+            num0, num1 = x0.shape[0], x1.shape[0]+x2.shape[0]
+            max_num0 = int(num1*self.max_ratio+1)  # balance the safe and unsafe data ratio
+            num0 = max_num0 if num0>max_num0 else num0
+            X = np.concatenate((x0[-num0:], x1, x2), axis=0)
+            Y = np.concatenate((y0[:num0], y1, y2), axis=0)
+            self.model.fit(X, Y)
+
+            y_pred=self.model.predict(x0)
+            acc0=np.equal(y0, y_pred)
+            y_pred=self.model.predict(x1)
+            acc1=np.equal(y1, y_pred)
+            print("unsafe acc: %.2f%%, safe acc: %.2f%%"%(100*acc1.mean(), 100*acc0.mean()) )
+        if self.save:
+            self.save_data()
+
         
     def predict(self, state):
         '''
@@ -134,12 +185,15 @@ class CostModel:
         @param state [ndarray, (batch, input_dim)]
         @return cost [ndarray, (batch,)]
         '''
+
         goal_pos = state[:, self.idx_goal] # [batch, 2]
         dist = np.sqrt(np.sum(goal_pos**2, axis=1)) #[batch], cost = x^2+y^2
         dist[dist<0.2] += -5
         dist[dist<0.1] += -8
         cost = dist # Goal reward part
+
         constraints_violation = self._predict_cost(state)
+
         cost[constraints_violation==1] += 500
         return cost
 
@@ -149,6 +203,7 @@ class CostModel:
         @param state [ndarray, (batch, input_dim)]
         @return cost [ndarray, (batch,)]
         '''
+
         goal_pos = state[:, self.idx_goal] # [batch, 2]
         dist = np.sqrt(np.sum(goal_pos**2, axis=1)) #[batch], cost = x^2+y^2
         dist[dist<0.2] += -5
@@ -177,6 +232,7 @@ class CostModel:
         if use_data_buf:
             x0, y0 = self.safe_data_buf.get_all()
             x1, y1 = self.unsafe_data_buf.get_all()
+            print("safe data: ", x0.shape[0], " unsafe data: ", x1.shape[0])
             num0, num1 = x0.shape[0], x1.shape[0]
             max_num0 = int(num1*self.max_ratio+1)  # balance the safe and unsafe data ratio
             num0 = max_num0 if num0>max_num0 else num0
@@ -184,13 +240,16 @@ class CostModel:
             Y = np.concatenate((y0[:num0], y1), axis=0)
         else: # use external data loader
             X, Y = x, y
+
         self.model.fit(X, Y)
+
         if use_data_buf:
             y_pred=self.model.predict(x0)
             acc0=np.equal(y0, y_pred)
             y_pred=self.model.predict(x1)
             acc1=np.equal(y1, y_pred)
-            print("unsafe data accuracy: %.2f%%, safe data accuracy: %.2f%%"%(100*acc1.mean(), 100*acc0.mean()) )
+            print("unsafe acc: %.2f%%, safe acc: %.2f%%"%(100*acc1.mean(), 100*acc0.mean()) )
+
         if self.save:
             self.save_data()
 
@@ -207,6 +266,7 @@ class CostModel:
         joblib.dump(self.model, self.model_path)
         self.safe_data_buf.save(self.safe_data_buf_path)
         self.unsafe_data_buf.save(self.unsafe_data_buf_path)
+        self.unsafe_transition_data_buf.save(self.unsafe_transition_data_buf_path)
         print(colorize("Successfully save model and data buffer to %s"%self.folder, 'green', bold=False))
 
     def load_data(self, path):
@@ -225,4 +285,9 @@ class CostModel:
         if osp.exists(safe_data_buf_path):
             print(colorize("Loading data buffer from %s ."%safe_data_buf_path, 'magenta', bold=True))
             self.safe_data_buf.load(safe_data_buf_path)
+
+        unsafe_transition_data_buf_path = osp.join(path, "unsafe_transition_data_buf.pkl")
+        if osp.exists(unsafe_transition_data_buf_path):
+            print(colorize("Loading data buffer from %s ."%unsafe_transition_data_buf_path, 'magenta', bold=True))
+            self.unsafe_transition_data_buf.load(unsafe_transition_data_buf_path)
         return model
