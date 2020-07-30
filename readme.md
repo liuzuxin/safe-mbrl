@@ -128,3 +128,23 @@ The output format follows: {Group name: Sum of N mean values}
 | ``--sum``  | `N`, sum the first `N` elements  |
 
 
+### Baseline Model Training
+For complete guidance on baseline models, please refer to the repo of the paper "Benchmarking Safe Exploration in Deep Reinforcement Learning."(https://github.com/openai/safety-starter-agents)
+
+- Train agent with baseline model(PPO, PPO-Lagrangian, TRPO, TRPO-Lagrangian, CPO) in PointGoal1 Environment:
+```Shell
+python baseline/scripts/experiment.py --robot point --task Goal1 --algo trpo
+```
+
+#### Arguments and Parameters
+| Flags and Parameters  | Description |
+| ------------- | ------------- |
+| ``--robot``  | robot model, selected from `point` or `car`  |
+| ``--task``  | environment task, selected from `Goal1` or `Goal2`, where `2` would be more difficult than `1`  |
+| ``--algo``  | algorithm, selected from 'ppo', 'ppo_lagrangian', 'trpo', 'trpo_lagrangian', 'cpo'  |
+| ``--seed``  | seed for Gym, PyTorch and Numpy  |
+
+- Test with the trained model in the PointGoal1 environment:
+```Shell
+python baseline/scripts/test_policy.py data/path/to/experiment
+```
