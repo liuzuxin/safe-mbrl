@@ -76,7 +76,7 @@ python run.py --robot point --level 1 --dir data/pg1 -n test-rce -o rce --c conf
 
 - Test with the trained model in the PointGoal1 environment:
 ```Shell
-python run.py --robot point --level 1 -o rce --c config.yml -r -t --load data/pg1/ensemble-rce/ensemble-rce_s0/
+python run.py --robot point --level 1 -o rce --c config.yml -r -t --load data/pg1/rce/rce_s1/
 ```
 
 - To test with some pretrained models, please download the data from this [link](https://drive.google.com/file/d/1aJuI3iwphxhtd0L_CDUHqB4XN-xPpITk/view?usp=sharing), unzip it, and replace the `data` folder with the unzipped one.

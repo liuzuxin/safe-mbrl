@@ -2,7 +2,7 @@
 @Author: Zuxin Liu
 @Email: zuxinl@andrew.cmu.edu
 @Date:   2020-03-24 01:03:52
-@LastEditTime: 2020-07-15 19:08:42
+@LastEditTime: 2020-07-29 23:44:24
 @Description:
 '''
 
@@ -19,11 +19,11 @@ import matplotlib.pyplot as plt
 from .optimizer import Optimizer
 
 
-class CEMOptimizer(Optimizer):
-    """A Pytorch-compatible CEM optimizer.
+class RCEOptimizer(Optimizer):
+    """A Pytorch-compatible RCE optimizer.
     """
-    def __init__(self, sol_dim, upper_bound, lower_bound, popsize, 
-        max_iters=10, num_elites=100, epsilon=0.001, alpha=0.25, init_mean=0, init_var=1.5):
+    def __init__(self, sol_dim, upper_bound, lower_bound, popsize, minimal_elites,
+        max_iters=10, num_elites=20, epsilon=0.001, alpha=0.25, init_mean=0, init_var=1.5):
         """Creates an instance of this class.
 
         Arguments:
@@ -43,6 +43,7 @@ class CEMOptimizer(Optimizer):
         self.sol_dim, self.max_iters, self.popsize, self.num_elites = sol_dim, max_iters, popsize, num_elites
         self.ub, self.lb = torch.FloatTensor(upper_bound), torch.FloatTensor(lower_bound) # (sol_dim)
         self.epsilon, self.alpha = epsilon, alpha
+        self.minimal_elites = minimal_elites
 
         if num_elites > popsize:
             raise ValueError("Number of elites must be at most the population size.")
@@ -130,9 +131,19 @@ class CEMOptimizer(Optimizer):
             samples = self.sample_trunc_norm(size, mu, sigma, self.lb, self.ub).numpy()
 
 
-            costs = self.cost_function(samples)
-            idx = np.argsort(costs)
-            elites = samples[idx][:self.num_elites]
+            cost_rewards, cost_constraints = self.cost_function(samples)
+            feasible_idx = cost_constraints==0
+            feasible_samples_reward = cost_rewards[feasible_idx]
+            feasible_samples = samples[feasible_idx] # [num, sol_dim]
+            feasible_num = feasible_samples.shape[0]
+            if feasible_num<self.minimal_elites:
+                idx = np.argsort(cost_constraints)
+                n = self.minimal_elites - feasible_num
+                sub_elites = samples[idx][:n]
+                elites = np.concatenate((sub_elites, feasible_samples), axis=0)
+            else:
+                idx = np.argsort(feasible_samples_reward)
+                elites = feasible_samples[idx][:self.num_elites]
             #print(np.sort(costs)[:self.num_elites])
 
             new_mean = np.mean(elites, axis=0)

@@ -2,15 +2,15 @@
 @Author: Zuxin Liu
 @Email: zuxinl@andrew.cmu.edu
 @Date:   2020-03-24 10:42:50
-@LastEditTime: 2020-07-29 15:16:13
+@LastEditTime: 2020-07-29 21:34:37
 @Description:
 '''
 
 import numpy as np
-from mbrl.optimizers import RandomOptimizer, CEMOptimizer, CCEOptimizer
+from mbrl.optimizers import RandomOptimizer, CEMOptimizer, RCEOptimizer
 
 class SafeMPC(object):
-    optimizers = {"CEM": CEMOptimizer, "RANDOM": RandomOptimizer, "RCE": CCEOptimizer}
+    optimizers = {"CEM": CEMOptimizer, "RANDOM": RandomOptimizer, "RCE": RCEOptimizer}
 
     def __init__(self, env, mpc_config, cost_model = None, n_ensembles=0):
         # mpc_config = config["mpc_config"]

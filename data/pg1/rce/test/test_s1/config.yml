@@ -1,22 +1,22 @@
 arguments:
     config: ./config.yml
-    dir: ./data/
+    dir: data/pg1/rce
     ensemble: 0
     episode: 10
     epoch: 80
     level: 1
-    load: data/pg1/rce/rce_s1/
+    load: data/pg1/ensemble-rce/ensemble-rce_s0/
     name: test
     optimizer: rce
-    render: true
+    render: false
     robot: point
-    save: false
+    save: true
     seed: 1
-    test: true
+    test: false
 cost_config:
     batch: 2000
     load: true
-    load_folder: data/pg1/rce/rce_s1/
+    load_folder: data/pg1/ensemble-rce/ensemble-rce_s0/
     max_ratio: 3
     model_param:
         boosting_type: gbdt
@@ -26,8 +26,8 @@ cost_config:
         n_jobs: 1
         num_leaves: 12
     safe_buffer_size: 50000
-    save: false
-    save_folder: null
+    save: true
+    save_folder: data/pg1/rce/test/test_s1
     unsafe_buffer_size: 10000
 dynamic_config:
     activation: relu
@@ -40,11 +40,11 @@ dynamic_config:
     - 1024
     learning_rate: 0.001
     load: true
-    load_folder: data/pg1/rce/rce_s1/
+    load_folder: data/pg1/ensemble-rce/ensemble-rce_s0/
     n_ensembles: 4
     n_epochs: 70
-    save: false
-    save_folder: null
+    save: true
+    save_folder: data/pg1/rce/test/test_s1
     test_freq: 5
     test_ratio: 0.15
 exp_name: test
