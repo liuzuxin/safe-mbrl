@@ -148,3 +148,6 @@ python baseline/scripts/experiment.py --robot point --task Goal1 --algo trpo
 ```Shell
 python baseline/scripts/test_policy.py data/path/to/experiment
 ```
+
+## Troubleshooting
+
