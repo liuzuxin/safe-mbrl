@@ -138,6 +138,7 @@ def get_datasets(logdir, condition=None):
             '''
             #process_and_replace_data(exp_data, pro_path)
 
+            exp_data.insert(len(exp_data.columns), 'Unit', unit)
             exp_data.insert(len(exp_data.columns), 'Method', condition1)
             exp_data.insert(len(exp_data.columns), 'BySeed', condition2)
 
@@ -235,8 +236,8 @@ def plot(datasets, x_label, y_label, condition, smooth, lineloc=None, linename=N
 
     # Graphics
     # plot data curves
-    sns.lineplot(data=datasets, x=x_label, y=y_label, hue=condition, ci='sd')
-    #sns.tsplot(data=datasets, time=x_label, value=y_label, unit="Unit", condition=condition, ci='sd', **kwargs)
+    #sns.lineplot(data=datasets, x=x_label, y=y_label, hue=condition, ci='sd')
+    sns.tsplot(data=datasets, time=x_label, value=y_label, unit="Unit", condition=condition, ci='sd')
 
     # plot straight lines
     if lineloc is not None:

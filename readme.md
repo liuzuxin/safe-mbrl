@@ -148,3 +148,49 @@ python baseline/scripts/experiment.py --robot point --task Goal1 --algo trpo
 ```Shell
 python baseline/scripts/test_policy.py data/path/to/experiment
 ```
+
+## Troubleshooting
+
+This section is reported based on Ubuntu 18.04.4 LTS.
+
+### `mujoco-py` installation
+Listed below are some of the errors we encountered during installation on our virtual environment:
+
+- Missing `patchelf`
+```
+  error: [Errno 2] No such file or directory: 'patchelf'
+  ----------------------------------------
+  ERROR: Failed building wheel for mujoco-py
+Failed to build mujoco-py
+ERROR: Could not build wheels for mujoco-py which use PEP 517 and cannot be installed directly
+```
+To install and configure this dependency:
+```Shell
+sudo -s
+curl -o /usr/local/bin/patchelf https://s3-us-west-2.amazonaws.com/openai-sci-artifacts/manual-builds/patchelf_0.9_amd64.elf
+chmod +x /usr/local/bin/patchelf
+```
+
+
+For other errors that are already recorded by `mujoco-py`, please refer to their official [troubleshooting section](https://github.com/openai/mujoco-py#troubleshooting).
+
+### Missing GLEW
+Similar to an error outlined in mujoco-py's official site, another error may appear during execution of the program:
+```
+ERROR: GLEW initalization error: Missing GL version
+```
+To install:
+```Shell
+sudo apt install libglew-dev
+```
+To configure:  
+Add the following to `.bashrc` or directly run the line on terminal
+```
+export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libGLEW.so
+```
+or
+```
+export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libGLEW.so:/usr/lib/x86_64-linux-gnu/libGL.so
+```
+**Note:** Don't forget to source the `.bashrc` file after modification.
+
