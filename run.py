@@ -126,21 +126,12 @@ def run(logger, config, args):
             cost_model.fit()
     env.close()
 
-'''
-python run.py --level 1 --robot point --dir data/pg1/ -n cce -o cce --epoch 25 --seed 0
-
-python run.py --level 1 --robot car --dir data/cg1/ -n cce -o cce --epoch 70 --seed 0
-
-python run.py --level 2 --robot point --dir data/pg2/ -n ensemble-cce -o cce --epoch 40 --seed 10
-
-python run.py --level 2 --robot car --dir data/cg2/ -n ensemble-cem -o cem --epoch 80 --seed 100
-'''
 if __name__ == '__main__':
     
     parser = argparse.ArgumentParser()
     parser.add_argument('--robot', type=str, default='point', help="robot model, selected from `point` or `car` ")
     parser.add_argument('--level', type=int, default=1, help="environment difficulty, selected from `1` or `2`, where `2` would be more difficult than `1`")
-    parser.add_argument('--epoch', type=int, default=80, help="maximum epochs to train")
+    parser.add_argument('--epoch', type=int, default=60, help="maximum epochs to train")
     parser.add_argument('--episode', type=int, default=10, help="determines how many episodes data to collect for each epoch")
     parser.add_argument('--render','-r', action='store_true', help="render the environment")
     parser.add_argument('--test', '-t', action='store_true', help="test the performance of pretrained models without training")

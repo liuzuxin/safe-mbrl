@@ -8,7 +8,11 @@ This repo has been tested on Ubuntu 18.04 LTS, and is probably fine for most rec
 ## Setup
 ### Simulation Environment Installation 
 
-Our experiment environments are modified from [Safety Gym](https://github.com/openai/safety-gym), which depends heavily on [mujoco_py](https://github.com/openai/mujoco-py). So the first step is installing [MuJoCo-200](https://www.roboti.us/index.html): download binaries, put license file inside, and add path to `~/.bashrc`. See the [mujoco_py](https://github.com/openai/mujoco-py) documentation for details. Note that mujoco_py **requires Python 3.6 or greater**, so our simulation environments do as well.
+Our experiment environments are modified from [Safety Gym](https://github.com/openai/safety-gym), which depends heavily on [mujoco_py](https://github.com/openai/mujoco-py). 
+
+So the first step is installing [MuJoCo-200](https://www.roboti.us/index.html): download binaries, put license file inside, and add path to `~/.bashrc`. 
+
+Then install the mujoco_py, See the [mujoco_py](https://github.com/openai/mujoco-py) documentation for details. Note that mujoco_py **requires Python 3.6 or greater**, so our simulation environments do as well.
 
 Afterwards, simply install our modified Safety Gym environments by:
 
@@ -17,6 +21,8 @@ cd env
 
 pip install -e .
 ```
+
+If you encouter any problems during the simulation environment installation, please see the troubleshooting section.
 
 ### Other Requirements
 - PyTorch-1.4.0
@@ -41,18 +47,45 @@ or
 ```
 conda install -c conda-forge lightgbm
 ```
-We suggest you install pytorch first as there might be package conflicts if installing lightgbm first.
+We suggest you install `pytorch` first as there might be package conflicts if installing lightgbm first.
 
 If you want to install GPU-version of LightGBM, please refer to their [documentation](https://lightgbm.readthedocs.io/en/latest/GPU-Tutorial.html).
 
+## Structure
+The structure of this repo is as follows:
+```
+safe-mbrl
+├── baseline  # stores the model-free baseline methods used in our paper.
+├── data  # stores the training data (weights, recorded variables, training config etc).
+├── env  # stores the modified safety gym simulation environment (update the car robot model).
+├── mbrl  # stores the safe model-based RL approach proposed by our paper.
+│   ├── controllers # we use the safe_mpc_controller.py as the basic control framework.
+│   ├── models # implementation of the dynamics model and the constraint model.
+│   ├── optimizers # implementation of our RCE method as well as CEM and random shooting.
+├── script # stores the scripts to plot and analyze the saved training data
+├── utils # stores some useful functions and tools
+├── config.yml # stores some hyper-parameters for mpc, dynamics model, and cost model.
+├── run.py # the training and testing script to reproduce our experiment results.
+```
 
 ## Usage
 
   
 ### Train with Default Configuration
-- Train agent with MPC + RCE + Model ensemble in the PointGoal1 environment:
+
+Here we provide some examples about how to train the agent. Note that the training procedure may take several hours to converge depending on your computer configuration.
+
+- Train  MPC + RCE agent in the PointGoal1 environment:
 ```Shell
-python run.py --robot point --level 1 --dir data/pg1 -n test-rce -o rce --c config.yml
+python run.py --robot point --level 1 --dir data/pg1 -n test-rce -o rce --epoch 25 --c config.yml
+```
+- Train  MPC + random agent in the PointGoal2 environment:
+```Shell
+python run.py --robot point --level 2 --dir data/pg2 -n test-random -o random --epoch 70 --c config.yml
+```
+- Train  MPC + CEM agent in the CarGoal1 environment:
+```Shell
+python run.py --robot car --level 1 --dir data/cg1 -n test-cem -o cem --epoch 40 --c config.yml
 ```
 
 #### Arguments and Parameters
@@ -73,13 +106,16 @@ python run.py --robot point --level 1 --dir data/pg1 -n test-rce -o rce --c conf
 | ``--optimizer``, ``-o``  | determine the optimizer, selected from `rce`, `cem`, or `random`  |
 | ``--config``  | specify the path to the configuation file of the models  |
 
+More hyper-parameters for the models and optimizers can be found in the `config.yml` file.
 
 - Test with the trained model in the PointGoal1 environment:
 ```Shell
-python run.py --robot point --level 1 -o rce --c config.yml -r -t --load data/pg1/rce/rce_s1/
+python run.py --robot point --level 1 -o rce --c config.yml -r -t --load data/pg1/weights/
 ```
 
-- To test with some pretrained models, please download the data from this [link](https://drive.google.com/file/d/1aJuI3iwphxhtd0L_CDUHqB4XN-xPpITk/view?usp=sharing), unzip it, and replace the `data` folder with the unzipped one.
+- To test with some pretrained models, please download the data from this [link](https://drive.google.com/file/d/1aJuI3iwphxhtd0L_CDUHqB4XN-xPpITk/view?usp=sharing), unzip it, and replace the `data` folder with the unzipped one. 
+
+We name each environment with the first letter of robot (`car` or `point`) + `g` (represent the Goal task) + `difficulty level`. For example, the `pg2` folder stores the experiment results for the PointGoal2 task. The trained dynamics model, data buffer, and cost model weights are stored in the `weights` folder within each environment folder. Other folders store the rewards and costs data for each method during training (the learning curves plots in the paper come from these data).
 
 ### Plot a Single Figure from Data
 To plot a single figure from saved progress data, specify the directory and run:
@@ -88,16 +124,18 @@ python script/plot.py path/to/stored/result -y Cost --smooth 30
 ```
 The script will parse all the sub directories in the `path/to/stored/` that contain `result` in the folder name.
 ![image](/data/figures/pg1-Reward.png)
+
+
+Horizontal lines can be used as convergence values for model-free methods, as recalled from the proposed paper. Simply run:
 ```
 python script/plot.py data/pg1/ensemble-rce data/pg1/ensemble-cem --hline 14 15 --linename Test1 Test2
 ```
 ![image](/data/figures/TestFigure3.png)
 
-Horizontal lines can be used as convergence values for model-free methods, as recalled from the proposed paper.
 
-The script does not yet support reading a combination of model-free and model-based data as their data files are coded differently. Be careful when selecing the paths to files.
+The script does not yet support reading a combination of model-free and model-based data as their data length vary a lot. As a result, the plot may only show the curves for the model-free methods. Be careful when selecing the paths to files.
 
-#### Arguments and Parameters
+#### Arguments and Parameters for plot.py
 | Flags and Parameters  | Description |
 | ------------- | ------------- |
 | Mandatory argument  | list of paths to data `progress.txt`; all sub-directories of the paths will be scanned.  |
@@ -111,14 +149,14 @@ The script does not yet support reading a combination of model-free and model-ba
 
 
 ### Average and Aggregate from Data
-As used in Table 1 of the proposed paper, mean and sum of data can be taken using the following method:
+As used in Table 1 in the proposed paper, mean and sum of data can be taken using the following method:
 ```
 python script/count.py data/cg1/ensemble-rce data/cg1/ensemble-cem --sum 100
 ```
 Mean value of the targetted label is taken across a group; e.g. mean `cost` for `RCE method`. The first `N` mean values are then summed for each group.
 The output format follows: {Group name: Sum of N mean values}
 
-#### Arguments and Parameters
+#### Arguments and Parameters for count.py
 | Flags and Parameters  | Description |
 | ------------- | ------------- |
 | Mandatory argument  | list of paths to data `progress.txt`; all sub-directories of the paths will be scanned.  |
@@ -129,14 +167,14 @@ The output format follows: {Group name: Sum of N mean values}
 
 
 ### Baseline Model Training
-For complete guidance on baseline models, please refer to the repo of the paper "Benchmarking Safe Exploration in Deep Reinforcement Learning."(https://github.com/openai/safety-starter-agents)
+For complete guidance on baseline models, please refer the repo of the paper "Benchmarking Safe Exploration in Deep Reinforcement Learning."(https://github.com/openai/safety-starter-agents)
 
 - Train agent with baseline model(PPO, PPO-Lagrangian, TRPO, TRPO-Lagrangian, CPO) in PointGoal1 Environment:
 ```Shell
 python baseline/scripts/experiment.py --robot point --task Goal1 --algo trpo
 ```
 
-#### Arguments and Parameters
+#### Arguments and Parameters for Baselines
 | Flags and Parameters  | Description |
 | ------------- | ------------- |
 | ``--robot``  | robot model, selected from `point` or `car`  |
@@ -153,7 +191,7 @@ python baseline/scripts/test_policy.py data/path/to/experiment
 
 This section is reported based on Ubuntu 18.04.4 LTS.
 
-### `mujoco-py` installation
+#### 1. `mujoco-py` installation
 Listed below are some of the errors we encountered during installation on our virtual environment:
 
 - Missing `patchelf`
@@ -171,10 +209,9 @@ curl -o /usr/local/bin/patchelf https://s3-us-west-2.amazonaws.com/openai-sci-ar
 chmod +x /usr/local/bin/patchelf
 ```
 
-
 For other errors that are already recorded by `mujoco-py`, please refer to their official [troubleshooting section](https://github.com/openai/mujoco-py#troubleshooting).
 
-### Missing GLEW
+#### 2. Missing GLEW
 Similar to an error outlined in mujoco-py's official site, another error may appear during execution of the program:
 ```
 ERROR: GLEW initalization error: Missing GL version
