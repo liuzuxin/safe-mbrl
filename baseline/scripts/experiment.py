@@ -1,14 +1,16 @@
 #!/usr/bin/env python
 import gym 
 import safety_gym
-import sys
-sys.path.append("../")
 import safe_rl
 from safe_rl.utils.run_utils import setup_logger_kwargs
 from safe_rl.utils.mpi_tools import mpi_fork
-sys.path.append("../../")
+
+import os,sys,inspect
+current_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+parent_dir = os.path.dirname(current_dir)
+parent_dir = os.path.dirname(parent_dir)
+sys.path.insert(0, parent_dir) 
 from utils.env_utils import SafetyGymEnv
-import os
 
 DEFAULT_ENV_CONFIG_P = dict(
     action_repeat=1,

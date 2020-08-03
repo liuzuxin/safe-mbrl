@@ -169,6 +169,13 @@ The output format follows: {Group name: Sum of N mean values}
 ### Baseline Model Training
 For complete guidance on baseline models, please refer the repo of the paper "Benchmarking Safe Exploration in Deep Reinforcement Learning."(https://github.com/openai/safety-starter-agents)
 
+To install the baseline method:
+```
+cd baseline
+
+pip install -e .
+```
+
 - Train agent with baseline model(PPO, PPO-Lagrangian, TRPO, TRPO-Lagrangian, CPO) in PointGoal1 Environment:
 ```Shell
 python baseline/scripts/experiment.py --robot point --task Goal1 --algo trpo
