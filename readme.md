@@ -1,4 +1,4 @@
-Model-based RL with Robust Cross Entropy Method
+Safe Model-based RL with Robust Cross Entropy Method
 ==================================
 This repo contains the code for [this paper](https://drive.google.com/file/d/1KlBUiac2Q6aW0dTqR_KCLi1GbsTSWn1p/view?usp=sharing). (Arxiv link will be available soon!)
 ## Abstract
