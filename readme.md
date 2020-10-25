@@ -1,6 +1,10 @@
 Safe Model-based RL with Robust Cross Entropy Method
 ==================================
 This repo contains the code for [this paper](https://arxiv.org/abs/2010.07968).
+
+![pg1_trpol](./media/pg1_trpol.gif)
+![pg1_rce](./media/pg1_rce.gif)
+
 ## Abstract
 This paper studies the safe reinforcement learning (RL) problem without assumptions about prior knowledge of the system dynamics and the constraint function. We employ an uncertainty-aware neural network ensemble model to learn the dynamics, and we infer the unknown constraint function through indicator constraint violation signals. We use model predictive control (MPC) as the basic control framework and propose the robust cross-entropy method (RCE) to optimize the control sequence considering the model uncertainty and constraints. We evaluate our methods in the Safety Gym environment. The results show that our approach achieves better constraint satisfaction than baseline safe RL methods while maintaining good task performance. Additionally, we are able to achieve several orders of magnitude better sample efficiency when compared to constrained model-free RL approaches.
 
