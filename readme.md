@@ -1,6 +1,7 @@
 Safe Model-based RL with Robust Cross Entropy Method
 ==================================
 This repo contains the code for [this paper](https://arxiv.org/abs/2010.07968).
+
 <img src="./media/pg1_trpol.gif" width="425"/> <img src="./media/pg1_trpol.gif" width="425"/>
 ![pg1_trpol](./media/pg1_trpol.gif) ![pg2_trpol](./media/pg2_trpol.gif)
 ![pg1_rce](./media/pg1_rce.gif) ![pg2_rce](./media/pg2_rce.gif)
