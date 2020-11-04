@@ -1,6 +1,7 @@
 Safe Model-based RL with Robust Cross Entropy Method
 ==================================
 This repo contains the code for [this paper](https://arxiv.org/abs/2010.07968).
+[This website](https://sites.google.com/site/mpcrcesafeai2020/) contains a breif introduction to our paper.
 
 <p align="center">
 <!--   <img src="./media/pg1_trpol.gif" height="200"/> <img src="./media/pg2_trpol_10.gif" height="200"/> <br /> -->
