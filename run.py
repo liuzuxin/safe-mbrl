@@ -59,7 +59,7 @@ def run(logger, config, args):
 
     # Prepare random collected dataset
     start_time = time.time()
-    pretrain_episodes = 2000 if args.load is None else 10
+    pretrain_episodes = 1000 if args.load is None else 10
     pretrain_max_step = 50
     print("collecting random episodes...")
     data_num = 0
