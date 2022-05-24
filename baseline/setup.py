@@ -18,6 +18,6 @@ setup(
         'mujoco_py==2.0.2.7',
         'numpy~=1.17.4',
         'seaborn==0.8.1',
-        'tensorflow==1.15.4',
+        'tensorflow==2.6.4',
     ],
 )
