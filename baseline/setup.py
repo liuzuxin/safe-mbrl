@@ -12,7 +12,7 @@ setup(
     packages=['safe_rl'],
     install_requires=[
         'gym~=0.15.3',
-        'joblib==0.14.0',
+        'joblib==1.2.0',
         'matplotlib==3.1.1',
         'mpi4py==3.0.2',
         'mujoco_py==2.0.2.7',
